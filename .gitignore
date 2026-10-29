@@ -5,3 +5,7 @@ dist/
 build/
 *.egg-info/
 transcripts/
+rust/target/
+rust/Cargo.lock
+/tmp/
+*.wav

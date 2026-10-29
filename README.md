@@ -1,46 +1,49 @@
 # kutascribe
 
-Local GPU speech-to-text for **audio + video** → timestamped `.txt`.
+Local speech-to-text for **audio + video** → timestamped `.txt`. Single binary.
 
-- No cloud, no API key — runs on your machine (NVIDIA 4070 tested)
-- Handles `mp3/wav/m4a/ogg/flac` + `mp4/mkv/webm/mov/avi` (ffmpeg/PyAV extracts audio from video)
-- Default model `large-v3-turbo` (~1.6GB, ~3-4GB VRAM) — best speed/accuracy tradeoff
-- Leaves VoxType dictation untouched — separate env
+- No cloud, no API key
+- Handles `mp3/wav/m4a/ogg/flac` + `mp4/mkv/webm/mov/avi` (ffmpeg extracts audio)
+- Output: `[HH:MM:SS -> HH:MM:SS] text` in `.txt`
+- Leaves VoxType dictation untouched
 
-## Install (Python v0.1)
+## Rust single binary (primary)
+
+```bash
+cd ~/Deving/kutascribe/rust
+cargo build --release
+./target/release/kutascribe ~/Downloads/hrcmee/HRC7.mp3 -o /tmp/out --model tiny
+./target/release/kutascribe ~/Downloads/hrcmee/ -o ~/Downloads/hrcmee/transcripts --model large-v3-turbo
+
+# install globally
+cargo install --path .
+# or from GitHub
+cargo install --git https://github.com/mrdankuta/kutascribe --locked
+```
+
+Models auto-download to `~/.cache/kutascribe/models/` as `ggml-<name>.bin` from `huggingface.co/ggerganov/whisper.cpp`:
+`tiny` (75M, fast test) / `base` / `small` / `medium` / `large-v3-turbo` (~1.6GB, best)
+
+Needs `ffmpeg` on PATH.
+
+Current build: CPU portable (no system deps). For GPU: `sudo pacman -S vulkan-headers shaderc` then enable `vulkan` feature in `rust/Cargo.toml`.
+
+## Python GPU version (legacy, faster on NVIDIA)
+
+`faster-whisper` + CUDA, ~10x realtime on RTX 4070. Kept for batch GPU jobs.
 
 ```bash
 cd ~/Deving/kutascribe
 uv venv --python 3.11
-uv pip install -e .
-# GPU (fixes libcublas.so.12 on CUDA systems):
 uv pip install -e ".[gpu]"
+kutascribe-py ~/Downloads/hrcmee/ -o ./transcripts --model large-v3-turbo
 ```
 
-Needs `ffmpeg` on PATH.
+## Format
 
-## Use
-
-```bash
-# single file
-kutascribe ~/Downloads/hrcmee/HRC7.mp3 -o ~/Downloads/hrcmee/transcripts
-
-# whole folder (audio + video)
-kutascribe ~/Downloads/hrcmee/ -o ~/Downloads/hrcmee/transcripts
-
-# video
-kutascribe ~/Downloads/BWAIWorkshop*.mp4 -o ./transcripts
 ```
+Source: HRC7.mp3
+Language: en
 
-Output (`HRC1mp3.txt`):
+[00:00:00 -> 00:00:02] and they will be able to combat for us.
 ```
-Source: HRC1mp3.mp3
-Language: en (p=0.99)
-Duration: 1705.3s
-
-[00:00:00 -> 00:00:08] ... text ...
-```
-
-## Rust single-binary (in progress)
-
-See `rust/` — `cargo build --release` → single `kutascribe` binary using whisper.cpp (Vulkan/CUDA/CPU), no Python needed. Goal: `cargo install --git https://github.com/mrdankuta/kutascribe`.

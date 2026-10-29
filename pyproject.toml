@@ -19,7 +19,7 @@ gpu = [
 ]
 
 [project.scripts]
-kutascribe = "kutascribe.cli:main"
+kutascribe-py = "kutascribe.cli:main"
 
 [build-system]
 requires = ["hatchling"]
