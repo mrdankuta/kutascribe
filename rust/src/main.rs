@@ -3,7 +3,7 @@ use clap::Parser;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// kutascribe: local speech-to-text (audio+video) -> timestamped .txt
+/// kutascribe: local speech-to-text (audio+video) -> .txt
 /// Single binary, whisper.cpp via whisper-rs.
 #[derive(Parser, Debug)]
 #[command(name = "kutascribe", version)]
@@ -23,6 +23,20 @@ struct Args {
     /// Language: en, auto, fr...
     #[arg(long, default_value = "en")]
     language: String,
+
+    /// Include timestamps? Default off (plain paragraphs).
+    #[arg(long, default_value_t = false)]
+    timestamps: bool,
+
+    /// Merge native whisper segments into larger chunks up to N seconds.
+    /// 0 = native whisper segmentation (2-8s). 60 = ~1-min paragraphs.
+    #[arg(long, default_value_t = 60)]
+    chunk_secs: u64,
+
+    /// Compute device: auto, cpu, vulkan, cuda.
+    /// auto = GPU if compiled in + available, else CPU.
+    #[arg(long, default_value = "auto")]
+    device: String,
 }
 
 const AUDIO_EXTS: &[&str] = &["mp3", "wav", "m4a", "ogg", "flac", "opus", "wma", "aac"];
@@ -109,6 +123,47 @@ fn collect_inputs(patterns: &[String]) -> Vec<PathBuf> {
     out
 }
 
+fn backend_info(requested: &str) -> &'static str {
+    #[cfg(feature = "vulkan")]
+    {
+        if requested == "cpu" { return "cpu (forced)"; }
+        return "vulkan (auto)";
+    }
+    #[cfg(feature = "cuda")]
+    {
+        if requested == "cpu" { return "cpu (forced)"; }
+        return "cuda (auto)";
+    }
+    #[cfg(not(any(feature = "vulkan", feature = "cuda")))]
+    {
+        let _ = requested;
+        return "cpu (this binary built without GPU; rebuild with --features vulkan)";
+    }
+}
+
+struct Chunk { start: f64, end: f64, text: String }
+
+fn merge_segments(segs: Vec<(f64, f64, String)>, chunk_secs: u64) -> Vec<Chunk> {
+    if chunk_secs == 0 {
+        return segs.into_iter().map(|(s,e,t)| Chunk{start:s,end:e,text:t}).collect();
+    }
+    let mut out: Vec<Chunk> = vec![];
+    for (s,e,t) in segs {
+        let t = t.trim().to_string();
+        if t.is_empty() { continue; }
+        if let Some(last) = out.last_mut() {
+            if e - last.start <= chunk_secs as f64 {
+                last.end = e;
+                last.text.push(' ');
+                last.text.push_str(&t);
+                continue;
+            }
+        }
+        out.push(Chunk{start:s,end:e,text:t});
+    }
+    out
+}
+
 fn to_wav_16k(src: &Path, tmp: &Path) -> Result<()> {
     // video works here: ffmpeg extracts the audio track
     let st = Command::new("ffmpeg")
@@ -141,6 +196,8 @@ fn main() -> Result<()> {
         bail!("No audio/video files found.");
     }
     println!("Found {} file(s)", files.len());
+    println!("Backend: {}", backend_info(&args.device));
+    println!("Timestamps: {}, chunk_secs: {}", if args.timestamps {"on"} else {"off (default)"}, args.chunk_secs);
 
     let mpath = model_path(&args.model)?;
     println!("Model: {}", mpath.display());
@@ -199,6 +256,16 @@ fn main() -> Result<()> {
             .map_err(|e| anyhow::anyhow!("transcribe: {:?}", e))?;
 
         let n = state.full_n_segments();
+        let mut raw: Vec<(f64,f64,String)> = vec![];
+        for i in 0..n {
+            if let Some(seg) = state.get_segment(i) {
+                let text = seg.to_str_lossy().unwrap_or_default().to_string();
+                let t0 = seg.start_timestamp() as f64 / 100.0;
+                let t1 = seg.end_timestamp() as f64 / 100.0;
+                raw.push((t0, t1, text));
+            }
+        }
+        let chunks = merge_segments(raw, args.chunk_secs);
         let mut f = std::fs::File::create(&out)?;
         use std::io::Write;
         writeln!(
@@ -207,16 +274,21 @@ fn main() -> Result<()> {
             src.file_name().unwrap_or_default().to_string_lossy()
         )?;
         writeln!(f, "Language: {}", args.language)?;
+        if args.timestamps {
+            writeln!(f, "Timestamps: on, chunk_secs: {}", args.chunk_secs)?;
+        } else {
+            writeln!(f, "Timestamps: off, chunk_secs: {}", args.chunk_secs)?;
+        }
         writeln!(f)?;
-        for i in 0..n {
-            if let Some(seg) = state.get_segment(i) {
-                let text = seg.to_str_lossy().unwrap_or_default().to_string();
-                let t0 = seg.start_timestamp() as f64 / 100.0;
-                let t1 = seg.end_timestamp() as f64 / 100.0;
-                writeln!(f, "[{} -> {}] {}", fmt_ts(t0), fmt_ts(t1), text.trim())?;
+        for c in &chunks {
+            if args.timestamps {
+                writeln!(f, "[{} -> {}] {}", fmt_ts(c.start), fmt_ts(c.end), c.text.trim())?;
+            } else {
+                writeln!(f, "{}", c.text.trim())?;
+                writeln!(f)?;
             }
         }
-        println!("DONE -> {} ({} segments)", out.display(), n);
+        println!("DONE -> {} ({} chunks from {} segments)", out.display(), chunks.len(), n);
         let _ = std::fs::remove_file(&tmp);
     }
     println!("\nAll done -> {}", outdir.display());
