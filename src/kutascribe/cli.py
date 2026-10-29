@@ -6,7 +6,7 @@ from .transcribe import load_model, transcribe_file, collect_inputs
 
 def main():
     ap = argparse.ArgumentParser(
-        prog="hrc-transcribe",
+        prog="kutascribe",
         description="Transcribe audio/video to timestamped .txt (Whisper, local GPU)",
     )
     ap.add_argument("inputs", nargs="+", help="audio/video files, dirs, or globs")

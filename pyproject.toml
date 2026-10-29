@@ -1,5 +1,5 @@
 [project]
-name = "hrc-transcribe"
+name = "kutascribe"
 version = "0.1.0"
 description = "Fast GPU speech-to-text for audio + video -> timestamped .txt (Whisper large-v3-turbo)"
 readme = "README.md"
@@ -19,14 +19,14 @@ gpu = [
 ]
 
 [project.scripts]
-hrc-transcribe = "hrc_transcribe.cli:main"
+kutascribe = "kutascribe.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hrc_transcribe"]
+packages = ["src/kutascribe"]
 
 [tool.uv]
 package = true
