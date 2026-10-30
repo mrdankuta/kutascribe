@@ -20,6 +20,8 @@ fi
 echo "Using BIN=$BIN CLI=$CLI"
 mkdir -p $APPDIR/usr/bin
 cp $BIN $APPDIR/usr/bin/kutascribe-app
+chmod +x $APPDIR/usr/bin/kutascribe-app
+ln -sf usr/bin/kutascribe-app $APPDIR/AppRun
 cp $CLI $APPDIR/usr/bin/kutascribe 2>/dev/null || echo "cli not found, skipping"
 
 cat > $APPDIR/kutascribe.desktop <<'DESK'
