@@ -11,8 +11,11 @@ Local speech-to-text for **audio + video** → `.txt`. Single binary.
 
 ```bash
 cd ~/Deving/kutascribe/rust
-cargo build --release                        # CPU portable (6.9M)
-cargo build --release --features vulkan      # GPU (needs vulkan-headers+shaderc) — 44M, use gpu=1
+cargo install --git https://github.com/mrdankuta/kutascribe --locked
+# ^ GPU by default (Vulkan, auto-fallback to CPU). Needs: sudo pacman -S vulkan-headers shaderc + ffmpeg
+
+cargo build --release                        # GPU default (44M, use gpu=1)
+cargo build --release --no-default-features  # CPU portable (6.9M, no system deps)
 
 ./target/release/kutascribe HRC7.mp3 -o out/
 ./target/release/kutascribe ./hrcmee/ -o ./transcripts --model large-v3-turbo
