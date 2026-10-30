@@ -7,6 +7,16 @@ APPDIR=$APP.AppDir
 BIN=${1:-target/release/kutascribe-app}
 CLI=${2:-target/release/kutascribe}
 
+# CI downloads artifacts to dist-bin/<target>-*/target/<target>/release/
+if [ ! -f "$BIN" ]; then
+  FOUND_APP=$(find dist-bin target -name kutascribe-app -type f 2>/dev/null | head -1 || true)
+  [ -n "$FOUND_APP" ] && BIN="$FOUND_APP"
+fi
+if [ ! -f "$CLI" ]; then
+  FOUND_CLI=$(find dist-bin target -name kutascribe -type f 2>/dev/null | head -1 || true)
+  [ -n "$FOUND_CLI" ] && CLI="$FOUND_CLI"
+fi
+echo "Using BIN=$BIN CLI=$CLI"
 mkdir -p $APPDIR/usr/bin
 cp $BIN $APPDIR/usr/bin/kutascribe-app
 cp $CLI $APPDIR/usr/bin/kutascribe 2>/dev/null || echo "cli not found, skipping"
