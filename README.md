@@ -63,8 +63,8 @@ cargo build --release --bin kuta-app
 
 ## Distribute
 
-- **Linux AppImage:** `./dist/appimage.sh` (needs `appimagetool`). Bundles `kuta-app` + `kutascribe`. Host needs: ffmpeg + Vulkan loader (via GPU drivers). Output: `Kutascribe-x86_64.AppImage`. CI builds it on tag.
+- **Linux AppImage:** `./packaging/appimage.sh` (needs `appimagetool`). Bundles `kuta-app` + `kutascribe`. Host needs: ffmpeg + Vulkan loader (via GPU drivers). Output: `Kutascribe-x86_64.AppImage`. CI builds it on tag.
 - **Windows:** `cargo wix` → `.msi`. Build CPU (`--no-default-features`) for portability, bundle `ffmpeg.exe` or winget dep. CI: `windows-latest` CPU.
 - **Mac (Intel+ARM):** `cargo-bundle` → `.dmg`, notarize. CI builds both `x86_64-apple-darwin` + `aarch64-apple-darwin` CPU. GPU via Metal is future (`whisper-rs/metal`).
-- **Brew:** `dist/Formula/kutascribe.rb` → `brew tap mrdankuta/kutascribe && brew install kutascribe` (depends on ffmpeg, CPU portable).
+- **Brew:** `packaging/Formula/kutascribe.rb` → `brew tap mrdankuta/kutascribe && brew install kutascribe` (depends on ffmpeg, CPU portable).
 - **Release flow:** `git tag v0.1.0 && git push --tags` → `.github/workflows/release.yml` builds linux/windows/mac + AppImage, upload to GitHub Releases.

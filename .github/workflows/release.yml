@@ -54,7 +54,7 @@ jobs:
         with:
           pattern: x86_64-unknown-linux-gnu-*
           path: dist-bin
-      - run: chmod +x dist/appimage.sh && dist/appimage.sh
+      - run: chmod +x packaging/appimage.sh && packaging/appimage.sh
       - uses: actions/upload-artifact@v4
         with:
           name: AppImage
