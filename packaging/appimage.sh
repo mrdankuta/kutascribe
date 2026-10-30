@@ -4,6 +4,7 @@
 set -e
 APP=Kutascribe
 APPDIR=$APP.AppDir
+export ARCH=${ARCH:-x86_64}
 BIN=${1:-target/release/kutascribe-app}
 CLI=${2:-target/release/kutascribe}
 
