@@ -32,9 +32,12 @@ Categories=AudioVideo;Utility;
 Comment=Local speech-to-text (audio+video to .txt)
 DESK
 
-# icon placeholder (replace with real png)
-mkdir -p $APPDIR/usr/share/icons
-echo "P1 1 1 1" > $APPDIR/kutascribe.pbm || true
+# minimal 1x1 png icon (replace with real logo later)
+mkdir -p $APPDIR
+echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > $APPDIR/kutascribe.png
+cp $APPDIR/kutascribe.png $APPDIR/.DirIcon
+mkdir -p $APPDIR/usr/share/icons/hicolor/256x256/apps
+cp $APPDIR/kutascribe.png $APPDIR/usr/share/icons/hicolor/256x256/apps/kutascribe.png
 
 # appimagetool
 if ! command -v appimagetool >/dev/null; then
