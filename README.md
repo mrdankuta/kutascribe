@@ -20,12 +20,15 @@ kutascribe/            # workspace root (cargo build --bin kutascribe / --bin ku
 
 ```bash
 # workspace root
-cargo build --release --bin kutascribe --bin kutascribe-app  # GPU default (Vulkan/Linux)
+cargo build --release --bin kutascribe --bin kutascribe-app  # CPU portable (works everywhere)
+cargo build --release --bin kutascribe --features vulkan  # local GPU (needs vulkan-headers+shaderc)
 cargo build --release --bin kutascribe --no-default-features --features metal  # Mac GPU (needs vulkan-headers+shaderc+ffmpeg)
 cargo build --release --bin kutascribe --no-default-features  # CPU portable
 cargo install --path rust --bin kutascribe --locked
 cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked
 cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe-app --locked  # GUI
+# local GPU:
+cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked --features vulkan
 
 # CPU-only everywhere (no system deps besides ffmpeg):
 cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked --no-default-features
