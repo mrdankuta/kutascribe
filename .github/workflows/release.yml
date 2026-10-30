@@ -41,15 +41,15 @@ jobs:
           targets: ${{ matrix.target }}
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt }}
-      - run: cargo build --release --target ${{ matrix.target }} ${{ matrix.features }} --bin kutascribe
-      - run: cargo build --release --target ${{ matrix.target }} --bin kutascribe-app
+      - run: cargo build --release --target ${{ matrix.target }} ${{ matrix.features }} --bin kutascribe-cli
+      - run: cargo build --release --target ${{ matrix.target }} --bin kutascribe-gui
         if: runner.os == 'Linux'
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
           path: |
             target/${{ matrix.target }}/release/kutascribe*
-            target/${{ matrix.target }}/release/kutascribe-app*
+            target/${{ matrix.target }}/release/kutascribe-gui*
 
   appimage:
     needs: build

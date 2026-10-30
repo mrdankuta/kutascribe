@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use kutascribe::{backend_info, collect_inputs, load_context, shellexpand, transcribe_one, TranscribeOptions};
 
 #[derive(Parser, Debug)]
-#[command(name = "kutascribe", version)]
+#[command(name = "kutascribe-cli", version)]
 struct Args {
     #[arg(required = true)]
     inputs: Vec<String>,

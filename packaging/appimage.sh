@@ -1,33 +1,33 @@
 #!/bin/bash
-# Build Kutascribe AppImage (Linux): bundles kutascribe-app + kutascribe + ffmpeg wrapper
+# Build Kutascribe AppImage (Linux): bundles kutascribe-gui + kutascribe-cli + ffmpeg wrapper
 # Usage: ./packaging/appimage.sh  (run after cargo build --release)
 set -e
 APP=Kutascribe
 APPDIR=$APP.AppDir
 export ARCH=${ARCH:-x86_64}
-BIN=${1:-target/release/kutascribe-app}
-CLI=${2:-target/release/kutascribe}
+BIN=${1:-target/release/kutascribe-gui}
+CLI=${2:-target/release/kutascribe-cli}
 
 # CI downloads artifacts to dist-bin/<target>-*/target/<target>/release/
 if [ ! -f "$BIN" ]; then
-  FOUND_APP=$(find dist-bin target -name kutascribe-app -type f 2>/dev/null | head -1 || true)
+  FOUND_APP=$(find dist-bin target -name kutascribe-gui -type f 2>/dev/null | head -1 || true)
   [ -n "$FOUND_APP" ] && BIN="$FOUND_APP"
 fi
 if [ ! -f "$CLI" ]; then
-  FOUND_CLI=$(find dist-bin target -name kutascribe -type f 2>/dev/null | head -1 || true)
+  FOUND_CLI=$(find dist-bin target -name kutascribe-cli -type f 2>/dev/null | head -1 || true)
   [ -n "$FOUND_CLI" ] && CLI="$FOUND_CLI"
 fi
 echo "Using BIN=$BIN CLI=$CLI"
 mkdir -p $APPDIR/usr/bin
-cp $BIN $APPDIR/usr/bin/kutascribe-app
-chmod +x $APPDIR/usr/bin/kutascribe-app
-ln -sf usr/bin/kutascribe-app $APPDIR/AppRun
-cp $CLI $APPDIR/usr/bin/kutascribe 2>/dev/null || echo "cli not found, skipping"
+cp $BIN $APPDIR/usr/bin/kutascribe-gui
+chmod +x $APPDIR/usr/bin/kutascribe-gui
+ln -sf usr/bin/kutascribe-gui $APPDIR/AppRun
+cp $CLI $APPDIR/usr/bin/kutascribe-cli 2>/dev/null || echo "cli not found, skipping"
 
 cat > $APPDIR/kutascribe.desktop <<'DESK'
 [Desktop Entry]
 Name=Kutascribe
-Exec=kutascribe-app
+Exec=kutascribe-gui
 Icon=kutascribe
 Type=Application
 Categories=AudioVideo;Utility;

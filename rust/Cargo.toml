@@ -1,6 +1,6 @@
 [package]
 name = "kutascribe"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 description = "Local GPU speech-to-text for audio+video -> timestamped .txt (single binary)"
 license = "MIT"
@@ -10,7 +10,7 @@ name = "kutascribe"
 path = "src/lib.rs"
 
 [[bin]]
-name = "kutascribe"
+name = "kutascribe-cli"
 path = "src/main.rs"
 
 [dependencies]
