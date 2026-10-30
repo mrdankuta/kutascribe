@@ -10,11 +10,11 @@ CLI=${2:-target/release/kutascribe-cli}
 
 # CI downloads artifacts to dist-bin/<target>-*/target/<target>/release/
 if [ ! -f "$BIN" ]; then
-  FOUND_APP=$(find dist-bin target -name kutascribe-gui -type f 2>/dev/null | head -1 || true)
+  FOUND_APP=$(find dist-bin target -name "kutascribe-gui*" -type f ! -name "*.d" 2>/dev/null | head -1 || true)
   [ -n "$FOUND_APP" ] && BIN="$FOUND_APP"
 fi
 if [ ! -f "$CLI" ]; then
-  FOUND_CLI=$(find dist-bin target -name kutascribe-cli -type f 2>/dev/null | head -1 || true)
+  FOUND_CLI=$(find dist-bin target -name "kutascribe-cli*" -type f ! -name "*.d" ! -name "*.exe" 2>/dev/null | head -1 || true)
   [ -n "$FOUND_CLI" ] && CLI="$FOUND_CLI"
 fi
 echo "Using BIN=$BIN CLI=$CLI"

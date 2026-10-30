@@ -44,12 +44,26 @@ jobs:
       - run: cargo build --release --target ${{ matrix.target }} ${{ matrix.features }} --bin kutascribe-cli
       - run: cargo build --release --target ${{ matrix.target }} --bin kutascribe-gui
         if: runner.os == 'Linux'
+      - name: Rename with OS/ARCH
+        shell: bash
+        run: |
+          mkdir -p dist
+          # CLI (all OSes) — arch in filename, no more collisions
+          if [ -f target/${{ matrix.target }}/release/kutascribe-cli ]; then
+            cp target/${{ matrix.target }}/release/kutascribe-cli dist/kutascribe-cli-${{ matrix.target }}
+          fi
+          if [ -f target/${{ matrix.target }}/release/kutascribe-cli.exe ]; then
+            cp target/${{ matrix.target }}/release/kutascribe-cli.exe dist/kutascribe-cli-${{ matrix.target }}.exe
+          fi
+          # GUI (Linux only for now)
+          if [ -f target/${{ matrix.target }}/release/kutascribe-gui ]; then
+            cp target/${{ matrix.target }}/release/kutascribe-gui dist/kutascribe-gui-${{ matrix.target }}
+          fi
+          ls -lh dist/
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            target/${{ matrix.target }}/release/kutascribe*
-            target/${{ matrix.target }}/release/kutascribe-gui*
+          name: bins-${{ matrix.target }}
+          path: dist/*
 
   appimage:
     needs: build
@@ -58,7 +72,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: x86_64-unknown-linux-gnu-*
+          pattern: bins-x86_64-unknown-linux-gnu*
           path: dist-bin
       - run: ARCH=x86_64 chmod +x packaging/appimage.sh && ARCH=x86_64 packaging/appimage.sh
       - uses: actions/upload-artifact@v4
@@ -79,5 +93,19 @@ jobs:
       - run: ls -R dist; chmod +x dist/kutascribe* 2>/dev/null || true
       - uses: softprops/action-gh-release@v2
         with:
+          body: |
+            ## kutascribe ${{ github.ref_name }}
+
+            | Asset | OS | Arch | Format |
+            |---|---|---|---|
+            | `kutascribe-cli-x86_64-unknown-linux-gnu` | Linux | x86_64 | binary (chmod +x) |
+            | `kutascribe-gui-x86_64-unknown-linux-gnu` | Linux | x86_64 | binary GUI |
+            | `Kutascribe-x86_64.AppImage` | Linux | x86_64 | AppImage (needs ffmpeg) |
+            | `kutascribe-cli-x86_64-pc-windows-msvc.exe` | Windows | x86_64 | .exe |
+            | `kutascribe-cli-x86_64-apple-darwin` | macOS Intel | x86_64 | binary |
+            | `kutascribe-cli-aarch64-apple-darwin` | macOS Apple Silicon | arm64 | binary |
+            Models auto-download to `~/.cache/kutascribe/models/` on first run. Needs `ffmpeg` on PATH.
           files: |
-            dist/**
+            dist/kutascribe-cli-*
+            dist/kutascribe-gui-*
+            dist/*.AppImage
