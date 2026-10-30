@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            features: --features vulkan
+            bins: kutascribe
+            apt: libvulkan-dev shaderc ffmpeg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            features: --no-default-features
+            bins: kutascribe
+          - os: macos-14
+            target: x86_64-apple-darwin
+            features: --no-default-features
+            bins: kutascribe
+          - os: macos-14
+            target: aarch64-apple-darwin
+            features: --no-default-features
+            bins: kutascribe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt }}
+      - run: cargo build --release --locked --target ${{ matrix.target }} ${{ matrix.features }} --bin kutascribe
+      - run: cargo build --release --locked --target ${{ matrix.target }} --bin kuta-app
+        if: runner.os == 'Linux'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            target/${{ matrix.target }}/release/kutascribe*
+            target/${{ matrix.target }}/release/kuta-app*
+
+  appimage:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: x86_64-unknown-linux-gnu-*
+          path: dist-bin
+      - run: chmod +x dist/appimage.sh && dist/appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AppImage
+          path: "*.AppImage"

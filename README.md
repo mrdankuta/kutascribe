@@ -1,58 +1,70 @@
 # kutascribe
 
-Local speech-to-text for **audio + video** → `.txt`. Single binary.
+Local speech-to-text for **audio + video** → `.txt`. Single binary + desktop app.
 
 - No cloud, no API key
 - Handles `mp3/wav/m4a/ogg/flac` + `mp4/mkv/webm/mov/avi` (ffmpeg extracts audio)
 - Default: plain paragraphs, 60s chunks. Opt-in timestamps.
 - GPU auto if built with Vulkan, else CPU.
 
-## CLI (primary)
-
-```bash
-cd ~/Deving/kutascribe/rust
-cargo install --git https://github.com/mrdankuta/kutascribe --locked
-# ^ GPU by default (Vulkan, auto-fallback to CPU). Needs: sudo pacman -S vulkan-headers shaderc + ffmpeg
-
-cargo build --release                        # GPU default (44M, use gpu=1)
-cargo build --release --no-default-features  # CPU portable (6.9M, no system deps)
-
-./target/release/kutascribe HRC7.mp3 -o out/
-./target/release/kutascribe ./hrcmee/ -o ./transcripts --model large-v3-turbo
-./target/release/kutascribe video.mp4 -o out/ --timestamps --chunk-secs 120
-./target/release/kutascribe audio.mp3 -o out/ --chunk-secs 0 --timestamps  # native 2-8s segments
-./target/release/kutascribe audio.mp3 -o out/ --device cpu   # force CPU
+```
+kutascribe/            # workspace root (cargo build --bin kutascribe / --bin kuta-app)
+  rust/                # CLI single binary (whisper-rs) -> `kutascribe`
+  app/                 # desktop app (eframe) -> `kuta-app`, calls `kutascribe` in PATH
+  ui-gpui/             # GPUI skeleton (blocked upstream, see its README)
+  src/kutascribe/      # Python legacy (faster-whisper CUDA) -> `kutascribe-py`
+  dist/                # AppImage script + Brew formula
+  .github/workflows/   # release builds (linux/windows/mac)
 ```
 
-Flags:
-- `--timestamps` (default off), `--chunk-secs 60` (0=native), `--device auto|cpu|vulkan|cuda`, `--model tiny|base|small|medium|large-v3-turbo`, `--language en|auto`
+## Install / build
+
+```bash
+# workspace root
+cargo build --release --bin kutascribe          # GPU default (needs vulkan-headers+shaderc+ffmpeg)
+cargo build --release --bin kutascribe --no-default-features  # CPU portable
+cargo install --path rust --bin kutascribe --locked
+cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked
+cargo install --git https://github.com/mrdankuta/kutascribe --bin kuta-app --locked  # GUI
+
+# CPU-only everywhere (no system deps besides ffmpeg):
+cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked --no-default-features
+```
+
+## Use (CLI)
+
+```bash
+kutascribe HRC7.mp3 -o out/
+kutascribe ./hrcmee/ -o ./transcripts --model large-v3-turbo
+kutascribe video.mp4 -o out/ --timestamps --chunk-secs 120
+kutascribe audio.mp3 -o out/ --chunk-secs 0 --timestamps  # native 2-8s segments
+kutascribe audio.mp3 -o out/ --device cpu
+```
+
+Flags: `--timestamps` (default off), `--chunk-secs 60` (0=native), `--device auto|cpu|vulkan|cuda`, `--model tiny|base|small|medium|large-v3-turbo`, `--language en|auto`
 
 Models auto-download to `~/.cache/kutascribe/models/ggml-*.bin`.
 
 ## Desktop app
 
-`app/` (eframe, builds today) — Add files/folder, pick model/lang/device, toggle timestamps, chunk slider, Transcribe button. Calls the `kutascribe` binary in PATH.
+`app/` — Add files/folder, model/lang/device, timestamps checkbox, chunk slider, Transcribe. Shells out to `kutascribe` in PATH (so install CLI first).
 
 ```bash
-cd ~/Deving/kutascribe/app
-cargo run
-cargo build --release  # -> target/release/kuta-app
+cargo run -p kuta-app
+cargo build --release --bin kuta-app
 ```
 
-`ui-gpui/` is the GPUI skeleton (blocked: crates.io gpui 0.2.2 broken on Rust 1.98, needs Zed checkout — see its README).
+## How it all fits
+
+- `kutascribe` (Rust): core engine. Video→ffmpeg→wav16k→whisper.cpp→merge→`.txt`. Single binary, GPU auto.
+- `kuta-app` (eframe): thin GUI over the CLI. No whisper linking, just spawns `kutascribe` so CLI/GUI never drift. For AppImage we bundle both binaries + depend on host ffmpeg/Vulkan loader.
+- `kutascribe-py` (Python): legacy fast GPU batch path (faster-whisper). Keep for your 4070 bulk jobs.
+- `ui-gpui`: future native GPUI frontend. Blocked: crates.io gpui 0.2.2 broken on Rust 1.98, real GPUI needs Zed checkout.
 
 ## Distribute
 
-- **Linux AppImage:** `cargo install cargo-appimage`, `cargo appimage --release -p kuta-app` → `Kutascribe-x86_64.AppImage` (bundle `ffmpeg` + model downloader)
-- **Windows:** `cargo install cargo-wix`, `cargo wix` → `.msi` (add ffmpeg to PATH or bundle)
-- **Mac:** `cargo-bundle` → `.dmg`, `xcode-select --install` needed, notarize for Gatekeeper
-- **Brew:** create tap `mrdankuta/kutascribe` with `Formula/kutascribe.rb`:
-  ```ruby
-  depends_on "ffmpeg"
-  def install; system "cargo", "install", "--locked", "--root", prefix, "--path", "rust"; end
-  ```
-  then `brew install mrdankuta/kutascribe/kutascribe`
-
-## Python legacy
-
-`src/kutascribe/` + `kutascribe-py` (faster-whisper CUDA, ~10x realtime on 4070). Kept for batch GPU jobs.
+- **Linux AppImage:** `./dist/appimage.sh` (needs `appimagetool`). Bundles `kuta-app` + `kutascribe`. Host needs: ffmpeg + Vulkan loader (via GPU drivers). Output: `Kutascribe-x86_64.AppImage`. CI builds it on tag.
+- **Windows:** `cargo wix` → `.msi`. Build CPU (`--no-default-features`) for portability, bundle `ffmpeg.exe` or winget dep. CI: `windows-latest` CPU.
+- **Mac (Intel+ARM):** `cargo-bundle` → `.dmg`, notarize. CI builds both `x86_64-apple-darwin` + `aarch64-apple-darwin` CPU. GPU via Metal is future (`whisper-rs/metal`).
+- **Brew:** `dist/Formula/kutascribe.rb` → `brew tap mrdankuta/kutascribe && brew install kutascribe` (depends on ffmpeg, CPU portable).
+- **Release flow:** `git tag v0.1.0 && git push --tags` → `.github/workflows/release.yml` builds linux/windows/mac + AppImage, upload to GitHub Releases.

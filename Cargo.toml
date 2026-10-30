@@ -1,0 +1,4 @@
+[workspace]
+members = ["rust", "app"]
+exclude = ["ui-gpui"]
+resolver = "2"
