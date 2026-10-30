@@ -2079,16 +2079,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
-name = "kuta-app"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "eframe",
- "egui",
- "rfd",
-]
-
-[[package]]
 name = "kutascribe"
 version = "0.1.0"
 dependencies = [
@@ -2101,6 +2091,17 @@ dependencies = [
  "reqwest",
  "walkdir",
  "whisper-rs",
+]
+
+[[package]]
+name = "kutascribe-app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "eframe",
+ "egui",
+ "kutascribe",
+ "rfd",
 ]
 
 [[package]]

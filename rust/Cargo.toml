@@ -5,6 +5,10 @@ edition = "2021"
 description = "Local GPU speech-to-text for audio+video -> timestamped .txt (single binary)"
 license = "MIT"
 
+[lib]
+name = "kutascribe"
+path = "src/lib.rs"
+
 [[bin]]
 name = "kutascribe"
 path = "src/main.rs"

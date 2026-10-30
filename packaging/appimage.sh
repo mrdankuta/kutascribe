@@ -1,20 +1,20 @@
 #!/bin/bash
-# Build Kutascribe AppImage (Linux): bundles kuta-app + kutascribe + ffmpeg wrapper
+# Build Kutascribe AppImage (Linux): bundles kutascribe-app + kutascribe + ffmpeg wrapper
 # Usage: ./packaging/appimage.sh  (run after cargo build --release)
 set -e
 APP=Kutascribe
 APPDIR=$APP.AppDir
-BIN=${1:-target/release/kuta-app}
+BIN=${1:-target/release/kutascribe-app}
 CLI=${2:-target/release/kutascribe}
 
 mkdir -p $APPDIR/usr/bin
-cp $BIN $APPDIR/usr/bin/kuta-app
+cp $BIN $APPDIR/usr/bin/kutascribe-app
 cp $CLI $APPDIR/usr/bin/kutascribe 2>/dev/null || echo "cli not found, skipping"
 
 cat > $APPDIR/kutascribe.desktop <<'DESK'
 [Desktop Entry]
 Name=Kutascribe
-Exec=kuta-app
+Exec=kutascribe-app
 Icon=kutascribe
 Type=Application
 Categories=AudioVideo;Utility;

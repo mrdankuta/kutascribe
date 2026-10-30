@@ -1,16 +1,16 @@
 use eframe::egui;
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver};
 
 fn main() -> eframe::Result<()> {
     let opts = eframe::NativeOptions::default();
     eframe::run_native(
-        "kutascribe",
+        "kutascribe-app",
         opts,
         Box::new(|_| Ok(Box::new(KutaApp::default()))),
     )
 }
 
-#[derive(Default)]
 struct KutaApp {
     files: Vec<PathBuf>,
     outdir: String,
@@ -21,30 +21,59 @@ struct KutaApp {
     device: String,
     log: String,
     running: bool,
+    rx: Option<Receiver<String>>,
+}
+
+impl Default for KutaApp {
+    fn default() -> Self {
+        Self {
+            files: vec![],
+            outdir: "./transcripts".to_string(),
+            model: "large-v3-turbo".to_string(),
+            language: "en".to_string(),
+            timestamps: false,
+            chunk_secs: 60,
+            device: "auto".to_string(),
+            log: String::new(),
+            running: false,
+            rx: None,
+        }
+    }
 }
 
 impl eframe::App for KutaApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("kutascribe — local speech-to-text");
-            ui.label("Audio + video → .txt (no cloud). Uses the kutascribe single binary.");
-            ui.separator();
+        // drain background logs
+        if let Some(rx) = &self.rx {
+            while let Ok(line) = rx.try_recv() {
+                if line == "__DONE__" {
+                    self.running = false;
+                    self.rx = None;
+                    self.log.push_str("\nAll done.\n");
+                    break;
+                } else if line == "__ERROR__" {
+                    // next message is the error text
+                    if let Ok(e) = rx.try_recv() {
+                        self.log.push_str(&format!("\nERROR: {}\n", e));
+                    }
+                    self.running = false;
+                    self.rx = None;
+                    break;
+                } else {
+                    self.log.push_str(&line);
+                    self.log.push('\n');
+                }
+            }
+            // keep repainting while running
+            if self.running {
+                ctx.request_repaint();
+            }
+        }
 
-            if self.outdir.is_empty() {
-                self.outdir = "./transcripts".to_string();
-            }
-            if self.model.is_empty() {
-                self.model = "large-v3-turbo".to_string();
-            }
-            if self.language.is_empty() {
-                self.language = "en".to_string();
-            }
-            if self.device.is_empty() {
-                self.device = "auto".to_string();
-            }
-            if self.chunk_secs == 0 {
-                self.chunk_secs = 60;
-            }
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("kutascribe-app — local speech-to-text");
+            ui.label("Audio + video → .txt (no cloud). Same core as CLI, single binary.");
+            ui.separator();
 
             if ui.button("Add files…").clicked() {
                 if let Some(paths) = rfd::FileDialog::new()
@@ -89,37 +118,61 @@ impl eframe::App for KutaApp {
 
             let can_run = !self.files.is_empty() && !self.running;
             if ui.add_enabled(can_run, egui::Button::new("Transcribe")).clicked() {
+                let (tx, rx) = channel::<String>();
+                self.rx = Some(rx);
                 self.running = true;
-                self.log = "starting…\n".to_string();
-                let files = self.files.clone();
-                let outdir = self.outdir.clone();
-                let model = self.model.clone();
-                let lang = self.language.clone();
-                let ts = self.timestamps;
-                let chunk = self.chunk_secs;
-                let dev = self.device.clone();
-                // run CLI in background thread, stream to log via channel? simple: blocking run then update
-                let mut cmd = std::process::Command::new("kutascribe");
-                for f in &files {
-                    cmd.arg(f);
-                }
-                cmd.arg("-o").arg(&outdir)
-                    .arg("--model").arg(&model)
-                    .arg("--language").arg(&lang)
-                    .arg("--chunk-secs").arg(chunk.to_string())
-                    .arg("--device").arg(&dev);
-                if ts {
-                    cmd.arg("--timestamps");
-                }
-                match cmd.output() {
-                    Ok(o) => {
-                        let mut s = String::from_utf8_lossy(&o.stdout).to_string();
-                        s.push_str(&String::from_utf8_lossy(&o.stderr));
-                        self.log = s;
+                self.log = format!(
+                    "Backend: {}\nModel: {}\n",
+                    kutascribe::backend_info(&self.device),
+                    self.model
+                );
+                let patterns: Vec<String> = self
+                    .files
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect();
+                let opt = kutascribe::TranscribeOptions {
+                    model: self.model.clone(),
+                    language: self.language.clone(),
+                    timestamps: self.timestamps,
+                    chunk_secs: self.chunk_secs,
+                    device: self.device.clone(),
+                };
+                let outdir = PathBuf::from(self.outdir.clone());
+                std::thread::spawn(move || {
+                    let send = |s: String| {
+                        let _ = tx.send(s);
+                    };
+                    send(format!("Found {} input(s)", patterns.len()));
+                    let files = kutascribe::collect_inputs(&patterns);
+                    if files.is_empty() {
+                        let _ = tx.send("__ERROR__".to_string());
+                        let _ = tx.send("No audio/video files found.".to_string());
+                        return;
                     }
-                    Err(e) => self.log = format!("failed to run `kutascribe` binary: {}\nIs it installed? cargo install --path rust", e),
-                }
-                self.running = false;
+                    let ctx = match kutascribe::load_context(&opt.model) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            let _ = tx.send("__ERROR__".to_string());
+                            let _ = tx.send(format!("model load: {:#}", e));
+                            return;
+                        }
+                    };
+                    std::fs::create_dir_all(&outdir).ok();
+                    // WhisperContext is not Sync, so stay in this one thread — fine.
+                    for src in files {
+                        let tx2 = tx.clone();
+                        match kutascribe::transcribe_one(&ctx, &src, &outdir, &opt, &|s| {
+                            let _ = tx2.send(s);
+                        }) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                let _ = tx.send(format!("ERROR {}: {:#}", src.display(), e));
+                            }
+                        }
+                    }
+                    let _ = tx.send("__DONE__".to_string());
+                });
             }
             if self.running {
                 ui.spinner();
@@ -129,7 +182,10 @@ impl eframe::App for KutaApp {
             egui::ScrollArea::vertical().max_height(220.).show(ui, |ui| {
                 ui.monospace(&self.log);
             });
-            ui.small("Distro: Linux AppImage (cargo-appimage) / Windows (cargo-wix .msi) / Mac (.dmg) / brew tap. See README.");
+            ui.small(format!(
+                "Backend: {} | single binary (lib, no shell-out) | ffmpeg + Vulkan loader on host",
+                kutascribe::backend_info(&self.device)
+            ));
         });
     }
 }
