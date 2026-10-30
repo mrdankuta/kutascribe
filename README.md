@@ -12,8 +12,7 @@ kutascribe/            # workspace root (cargo build --bin kutascribe / --bin ku
   rust/                # CLI single binary (whisper-rs) -> `kutascribe`
   app/                 # desktop app (eframe) -> `kuta-app`, calls `kutascribe` in PATH
   ui-gpui/             # GPUI skeleton (blocked upstream, see its README)
-  src/kutascribe/      # Python legacy (faster-whisper CUDA) -> `kutascribe-py`
-  dist/                # AppImage script + Brew formula
+  packaging/           # AppImage script + Brew formula
   .github/workflows/   # release builds (linux/windows/mac)
 ```
 
@@ -58,7 +57,7 @@ cargo build --release --bin kuta-app
 
 - `kutascribe` (Rust): core engine. Video→ffmpeg→wav16k→whisper.cpp→merge→`.txt`. Single binary, GPU auto.
 - `kuta-app` (eframe): thin GUI over the CLI. No whisper linking, just spawns `kutascribe` so CLI/GUI never drift. For AppImage we bundle both binaries + depend on host ffmpeg/Vulkan loader.
-- `kutascribe-py` (Python): legacy fast GPU batch path (faster-whisper). Keep for your 4070 bulk jobs.
+- Python legacy archived in branch `legacy/python-faster-whisper` (faster-whisper CUDA).
 - `ui-gpui`: future native GPUI frontend. Blocked: crates.io gpui 0.2.2 broken on Rust 1.98, real GPUI needs Zed checkout.
 
 ## Distribute

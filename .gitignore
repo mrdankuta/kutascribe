@@ -1,12 +1,6 @@
-__pycache__/
-*.pyc
-.venv/
-dist/
-build/
-*.egg-info/
-transcripts/
 target/
 **/target/
-rust/Cargo.lock
-/tmp/
+transcripts/
 *.wav
+*.mp3
+*.mp4
