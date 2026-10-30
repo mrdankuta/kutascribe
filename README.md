@@ -48,6 +48,11 @@ Flags: `--timestamps` (default off), `--chunk-secs 60` (0=native), `--device aut
 
 Models auto-download to `~/.cache/kutascribe/models/ggml-*.bin`.
 
+> SIGILL/AVX512 note (fixed in v0.2.9+): CI runners have AVX512, most laptops (e.g. i9-13900H) don't.
+> ggml with `GGML_NATIVE=ON` (`-march=native`) bakes AVX512 in → instant crash on model load.
+> Releases now build with `GGML_NATIVE=OFF GGML_AVX512=OFF` (portable + runtime dispatch).
+> Local GPU build on your own CPU is safe, but use the same flags when sharing binaries.
+
 ## Desktop app
 
 `app/` — Add files/folder, model/lang/device, timestamps checkbox, chunk slider, Transcribe. Shells out to `kutascribe` in PATH (so install CLI first).

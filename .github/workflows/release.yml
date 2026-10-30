@@ -29,6 +29,11 @@ jobs:
             features: --no-default-features
             bins: kutascribe
     runs-on: ${{ matrix.os }}
+    env:
+      # Portable ggml: do NOT use -march=native (CI runners have AVX512,
+      # user CPUs like i9-13900H don't -> SIGILL). Runtime dispatch instead.
+      GGML_NATIVE: OFF
+      GGML_AVX512: OFF
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
