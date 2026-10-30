@@ -115,7 +115,7 @@ pub fn model_path(name: &str) -> Result<PathBuf> {
         return Ok(dest);
     }
     let url = format!(
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}?download=true",
         fname
     );
     println!("Downloading model {} ...", url);
@@ -123,8 +123,26 @@ pub fn model_path(name: &str) -> Result<PathBuf> {
     let mut resp = reqwest::blocking::get(&url)
         .with_context(|| format!("download {}", url))?
         .error_for_status()?;
-    let mut out = std::fs::File::create(&dest)?;
-    std::io::copy(&mut resp, &mut out)?;
+    let total = resp.content_length();
+    // Atomic download: write to .part first, so interrupted downloads
+    // never look like complete models (which caused:
+    // "ERROR not all tensors loaded - expected 587, got 306" -> InitError).
+    let part = dest.with_extension("part");
+    {
+        let mut out = std::fs::File::create(&part)?;
+        let got = std::io::copy(&mut resp, &mut out)?;
+        if let Some(total) = total {
+            if got != total {
+                let _ = std::fs::remove_file(&part);
+                anyhow::bail!(
+                    "model download truncated for {}: got {} bytes, expected {} (deleted .part, retry)",
+                    fname, got, total
+                );
+            }
+        }
+        out.sync_all().ok();
+    }
+    std::fs::rename(&part, &dest)?;
     println!("Model downloaded.");
     Ok(dest)
 }
