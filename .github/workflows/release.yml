@@ -60,3 +60,19 @@ jobs:
         with:
           name: AppImage
           path: "*.AppImage"
+
+  publish:
+    needs: [build, appimage]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -R dist; chmod +x dist/kutascribe* 2>/dev/null || true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**
