@@ -106,7 +106,7 @@ impl eframe::App for KutaApp {
                 egui::ComboBox::from_id_salt("device")
                     .selected_text(&self.device)
                     .show_ui(ui, |ui| {
-                        for d in ["auto","cpu","vulkan","cuda"] {
+                        for d in ["auto","cpu","vulkan","cuda","metal"] {
                             ui.selectable_value(&mut self.device, d.to_string(), d);
                         }
                     });

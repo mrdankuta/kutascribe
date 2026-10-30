@@ -1,6 +1,6 @@
 [package]
 name = "kutascribe"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Local GPU speech-to-text for audio+video -> timestamped .txt (single binary)"
 license = "MIT"
@@ -31,3 +31,4 @@ glob = "0.3"
 default = ["vulkan"]
 vulkan = ["whisper-rs/vulkan"]
 cuda = ["whisper-rs/cuda"]
+metal = ["whisper-rs/metal"]

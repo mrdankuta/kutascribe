@@ -21,11 +21,11 @@ jobs:
             bins: kutascribe
           - os: macos-14
             target: x86_64-apple-darwin
-            features: --no-default-features
+            features: --no-default-features --features metal
             bins: kutascribe
           - os: macos-14
             target: aarch64-apple-darwin
-            features: --no-default-features
+            features: --no-default-features --features metal
             bins: kutascribe
     runs-on: ${{ matrix.os }}
     steps:

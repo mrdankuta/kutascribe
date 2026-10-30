@@ -32,25 +32,25 @@ pub fn fmt_ts(sec: f64) -> String {
 }
 
 pub fn backend_info(requested: &str) -> &'static str {
+    if requested == "cpu" {
+        return "cpu (forced)";
+    }
+    #[cfg(feature = "metal")]
+    if requested == "metal" || requested == "auto" {
+        return "metal (auto)";
+    }
     #[cfg(feature = "vulkan")]
-    {
-        if requested == "cpu" {
-            return "cpu (forced)";
-        }
+    if requested == "vulkan" || requested == "auto" {
         return "vulkan (auto)";
     }
     #[cfg(feature = "cuda")]
-    {
-        if requested == "cpu" {
-            return "cpu (forced)";
-        }
+    if requested == "cuda" || requested == "auto" {
         return "cuda (auto)";
     }
-    #[cfg(not(any(feature = "vulkan", feature = "cuda")))]
-    {
-        let _ = requested;
-        return "cpu (built without GPU; rebuild with --features vulkan)";
+    if requested == "auto" {
+        return "cpu (auto fallback; rebuild with --features vulkan/metal/cuda for GPU)";
     }
+    return "cpu (requested GPU not compiled in; rebuild with that --feature)";
 }
 
 pub fn shellexpand(s: &str) -> String {

@@ -5,7 +5,7 @@ Local speech-to-text for **audio + video** → `.txt`. Single binary + desktop a
 - No cloud, no API key
 - Handles `mp3/wav/m4a/ogg/flac` + `mp4/mkv/webm/mov/avi` (ffmpeg extracts audio)
 - Default: plain paragraphs, 60s chunks. Opt-in timestamps.
-- GPU auto if built with Vulkan, else CPU.
+- GPU auto (Vulkan/Linux, Metal/Mac, CUDA/optional), else CPU.
 
 ```
 kutascribe/            # workspace root (cargo build --bin kutascribe / --bin kutascribe-app)
@@ -20,7 +20,8 @@ kutascribe/            # workspace root (cargo build --bin kutascribe / --bin ku
 
 ```bash
 # workspace root
-cargo build --release --bin kutascribe --bin kutascribe-app  # GPU default (needs vulkan-headers+shaderc+ffmpeg)
+cargo build --release --bin kutascribe --bin kutascribe-app  # GPU default (Vulkan/Linux)
+cargo build --release --bin kutascribe --no-default-features --features metal  # Mac GPU (needs vulkan-headers+shaderc+ffmpeg)
 cargo build --release --bin kutascribe --no-default-features  # CPU portable
 cargo install --path rust --bin kutascribe --locked
 cargo install --git https://github.com/mrdankuta/kutascribe --bin kutascribe --locked
