@@ -1,0 +1,10 @@
+[package]
+name = "kuta-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.31"
+egui = "0.31"
+rfd = "0.15"
+anyhow = "1.0"

@@ -1,0 +1,8 @@
+[package]
+name = "kuta-ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gpui = "*"
+anyhow = "1.0"
