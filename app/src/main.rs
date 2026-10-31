@@ -26,6 +26,7 @@ struct KutaApp {
     timestamps: bool,
     chunk_secs: u64,
     device: String,
+    gpu_device: i32,
     log: String,
     running: bool,
     rx: Option<Receiver<String>>,
@@ -42,6 +43,7 @@ impl Default for KutaApp {
             timestamps: false,
             chunk_secs: 60,
             device: "auto".to_string(),
+            gpu_device: 1,
             log: String::new(),
             running: false,
             rx: None,
@@ -163,6 +165,7 @@ impl eframe::App for KutaApp {
                 ui.text_edit_singleline(&mut self.language);
                 ui.end_row();
                 ui.label("Device:");
+                ui.add(egui::Slider::new(&mut self.gpu_device, 0..=2).text("gpu idx (0=Intel, 1=NVIDIA)"));
                 egui::ComboBox::from_id_salt("device")
                     .selected_text(&self.device)
                     .show_ui(ui, |ui| {
@@ -245,6 +248,7 @@ impl KutaApp {
             timestamps: self.timestamps,
             chunk_secs: self.chunk_secs,
             device: self.device.clone(),
+            gpu_device: self.gpu_device,
         };
         let outdir = PathBuf::from(self.outdir.clone());
         std::thread::spawn(move || {
@@ -258,7 +262,7 @@ impl KutaApp {
                 let _ = tx.send("No audio/video files found.".to_string());
                 return;
             }
-            let ctx = match kutascribe::load_context(&opt.model) {
+            let ctx = match kutascribe::load_context_with_device(&opt.model, opt.gpu_device) {
                 Ok(c) => c,
                 Err(e) => {
                     let _ = tx.send("__ERROR__".to_string());

@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use clap::Parser;
 use std::path::PathBuf;
-use kutascribe::{backend_info, collect_inputs, load_context, shellexpand, transcribe_one, TranscribeOptions};
+use kutascribe::{backend_info, collect_inputs, shellexpand, transcribe_one, TranscribeOptions};
 
 #[derive(Parser, Debug)]
 #[command(name = "kutascribe-cli", version)]
@@ -20,6 +20,9 @@ struct Args {
     chunk_secs: u64,
     #[arg(long, default_value = "auto")]
     device: String,
+    /// Vulkan GPU index (vulkaninfo order: 0=Intel iGPU, 1=NVIDIA on hybrid). Try 1 for NVIDIA.
+    #[arg(long, default_value_t = 0)]
+    gpu_device: i32,
 }
 
 fn main() -> Result<()> {
@@ -30,6 +33,7 @@ fn main() -> Result<()> {
         timestamps: args.timestamps,
         chunk_secs: args.chunk_secs,
         device: args.device.clone(),
+        gpu_device: args.gpu_device,
     };
     let files = collect_inputs(&args.inputs);
     if files.is_empty() {
@@ -43,7 +47,8 @@ fn main() -> Result<()> {
         opt.chunk_secs
     );
 
-    let ctx = load_context(&opt.model)?;
+    let ctx = kutascribe::load_context_with_device(&opt.model, opt.gpu_device)?;
+    println!("GPU device index: {} (0=usually Intel iGPU, 1=NVIDIA on hybrid; check vulkaninfo --summary)", opt.gpu_device);
     let outdir = PathBuf::from(shellexpand(&args.output_dir));
     std::fs::create_dir_all(&outdir)?;
 

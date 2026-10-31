@@ -12,6 +12,7 @@ pub struct TranscribeOptions {
     pub timestamps: bool,
     pub chunk_secs: u64,
     pub device: String,
+    pub gpu_device: i32,
 }
 
 impl Default for TranscribeOptions {
@@ -22,6 +23,7 @@ impl Default for TranscribeOptions {
             timestamps: false,
             chunk_secs: 60,
             device: "auto".to_string(),
+            gpu_device: 0,
         }
     }
 }
@@ -203,12 +205,15 @@ pub fn to_wav_16k(src: &Path, tmp: &Path) -> Result<()> {
 }
 
 pub fn load_context(model_name: &str) -> Result<whisper_rs::WhisperContext> {
+    load_context_with_device(model_name, 0)
+}
+
+pub fn load_context_with_device(model_name: &str, gpu_device: i32) -> Result<whisper_rs::WhisperContext> {
     let mpath = model_path(model_name)?;
-    whisper_rs::WhisperContext::new_with_params(
-        &mpath,
-        whisper_rs::WhisperContextParameters::default(),
-    )
-    .map_err(|e| anyhow::anyhow!("load model {}: {:?}", mpath.display(), e))
+    let mut params = whisper_rs::WhisperContextParameters::default();
+    params.gpu_device(gpu_device);
+    Ok(whisper_rs::WhisperContext::new_with_params(&mpath, params)
+        .map_err(|e| anyhow::anyhow!("load model {} (gpu_device={}): {:?}", mpath.display(), gpu_device, e))?)
 }
 
 /// Transcribe one file. Returns number of chunks written.
